@@ -74,10 +74,11 @@ app.post('/sensor-data', [
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something went wrong!');
+app.app.use((err, req, res, next) => {
+    console.error(err.stack); // Logs the full error stack
+    res.status(500).send(err.message || 'Something went wrong!');
 });
+
 
 // Start the server
 app.listen(port, () => {
