@@ -8,7 +8,9 @@ const port = process.env.DB_PORT || 3000;
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-
+app.get('/', (req, res) => {
+    res.send('Hello World'); // Respond with "Hello World"
+});
 
 //endpoint for getting the last 10 rows
 app.get('/data',async (req, res, next) => {
