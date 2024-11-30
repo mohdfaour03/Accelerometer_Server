@@ -59,8 +59,10 @@ app.post('/sensor-data', [
     
 
     try {
-        const query = 'INSERT INTO motion_data (X, Y, Z) VALUES ($1, $2, $3) RETURNING *';
+        const query = 'INSERT INTO motion_data ("X", "Y", "Z") VALUES ($1, $2, $3) RETURNING *';
+
         const values = [x, y, z];
+        
         const result = await pool.query(query, values);
 
         res.status(201).json({
