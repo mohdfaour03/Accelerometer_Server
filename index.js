@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 //endpoint for getting the last 10 rows
 app.get('/data',async (req, res, next) => {
     try {
-        const result = await pool.query('SELECT * FROM motion_data ORDER BY timestamp DESC LIMIT 10');
+        const result = await pool.query('SELECT * FROM motion_data ORDER BY created_at DESC LIMIT 10');
         res.status(200).json({
             success: true,
             data: result.rows,
@@ -27,7 +27,7 @@ app.get('/data',async (req, res, next) => {
 //Endpoint for getting the last data row
 app.get('/latest-data', async (req, res, next) => {
     try {
-        const result = await pool.query('SELECT * FROM motion_data ORDER BY timestamp DESC LIMIT 1');
+        const result = await pool.query('SELECT * FROM motion_data ORDER BY created_at DESC LIMIT 1');
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'No data found' });
         }
