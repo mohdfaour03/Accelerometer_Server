@@ -48,6 +48,7 @@
             height: 100%;
             transition: width var(--transition-speed);
             overflow: hidden;
+            z-index: 1001;
         }
 
         .sidebar.collapsed {
@@ -103,6 +104,8 @@
         .header h1 {
             font-size: 24px;
             color: var(--accent-color);
+            display: flex;
+            align-items: center;
         }
 
         .toggle-btn {
@@ -120,7 +123,7 @@
             margin-left: 250px;
             padding: 80px 20px 20px 20px; /* Top padding to prevent overlap with header */
             flex: 1;
-            background-color: #1e1e1e;
+            background-color: var(--background-color);
             transition: margin-left var(--transition-speed);
         }
 
@@ -151,6 +154,50 @@
             width: 100%;
         }
 
+        /* Live Data Table Styling */
+        .data-table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background-color: #333;
+            color: var(--accent-color);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        td {
+            color: #ffffff;
+        }
+
+        tr:hover {
+            background-color: #2a2a2a;
+        }
+
+        /* Error Message Styling */
+        .error-message {
+            color: #ff4d4d;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none; /* Hidden by default */
+        }
+
         /* Footer Styling */
         .footer {
             text-align: center;
@@ -163,6 +210,7 @@
             font-size: 14px;
             color: #aaa;
             transition: left var(--transition-speed);
+            z-index: 1000;
         }
 
         .header.collapsed + .footer {
@@ -231,11 +279,19 @@
             <i class="fas fa-chart-bar icon"></i>
             <span class="link-text">Motion Statistics</span>
         </a>
+        <a href="#sensor-data">
+            <i class="fas fa-sliders-h icon"></i>
+            <span class="link-text">Sensor Data</span>
+        </a>
+        <a href="#live-data">
+            <i class="fas fa-table icon"></i>
+            <span class="link-text">Live Data Table</span>
+        </a>
     </div>
 
     <!-- Header -->
     <div class="header" id="header">
-        <h1>Motion Detection Dashboard</h1>
+        <h1><i class="fas fa-broadcast-tower"></i> Motion Detection Dashboard</h1>
         <button class="toggle-btn" id="toggleBtn" aria-label="Toggle Sidebar">
             <i class="fas fa-bars"></i>
         </button>
@@ -243,6 +299,11 @@
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
+        <!-- Error Message Container -->
+        <div id="error-message" class="error-message">
+            <i class="fas fa-exclamation-triangle"></i> An error occurred while fetching data.
+        </div>
+
         <!-- Motion Statistics Section -->
         <section id="motion-stats" class="card">
             <h2>Motion Statistics</h2>
@@ -258,6 +319,30 @@
             <div class="chart-container">
                 <!-- Sensor Data Chart -->
                 <canvas id="sensorDataChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Live Data Table Section -->
+        <section id="live-data" class="card">
+            <h2>Live Motion Sensor Data</h2>
+            <div class="data-table-container">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Temperature (&deg;C)</th>
+                            <th>X Accel (m/s²)</th>
+                            <th>Y Accel (m/s²)</th>
+                            <th>Z Accel (m/s²)</th>
+                            <th>X Gyro (°/s)</th>
+                            <th>Y Gyro (°/s)</th>
+                            <th>Z Gyro (°/s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data rows will be added dynamically here -->
+                    </tbody>
+                </table>
             </div>
         </section>
     </div>
@@ -293,15 +378,66 @@
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Motion Statistics Chart
+        // Function to fetch and update data
+        async function fetchAndUpdateData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Hide error message if visible
+                    hideError();
+
+                    // Update the table
+                    updateTable(data.data);
+
+                    // Update the charts
+                    updateMotionStatsChart(data.data);
+                    updateSensorDataChart(data.data);
+                } else {
+                    // Show error message
+                    showError('Failed to retrieve data from the server.');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showError('Unable to fetch data. Please check your connection.');
+            }
+        }
+
+        // Function to update the table with fetched data
+        function updateTable(dataRows) {
+            const tableBody = document.querySelector('#data-table tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            // Sort data in ascending order based on timestamp
+            const sortedData = dataRows.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // Add new rows
+            sortedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${new Date(row.timestamp).toLocaleString()}</td>
+                    <td>${row.temperature.toFixed(2)}</td>
+                    <td>${row.x_acceleration.toFixed(2)}</td>
+                    <td>${row.y_acceleration.toFixed(2)}</td>
+                    <td>${row.z_acceleration.toFixed(2)}</td>
+                    <td>${row.x_gyro.toFixed(2)}</td>
+                    <td>${row.y_gyro.toFixed(2)}</td>
+                    <td>${row.z_gyro.toFixed(2)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Initialize Motion Statistics Chart
         const motionStatsCtx = document.getElementById('motionStatsChart').getContext('2d');
         const motionStatsChart = new Chart(motionStatsCtx, {
             type: 'bar',
             data: {
-                labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+                labels: [], // Months or relevant labels
                 datasets: [{
                     label: 'Motion Events',
-                    data: [12, 19, 3, 5, 2, 3], // Replace with dynamic data
+                    data: [], // Dynamic data
                     backgroundColor: 'rgba(76, 175, 80, 0.6)',
                     borderColor: 'rgba(76, 175, 80, 1)',
                     borderWidth: 1
@@ -338,32 +474,56 @@
             }
         });
 
-        // Sensor Data Chart
+        // Initialize Sensor Data Chart
         const sensorDataCtx = document.getElementById('sensorDataChart').getContext('2d');
         const sensorDataChart = new Chart(sensorDataCtx, {
             type: 'line',
             data: {
-                labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'],
+                labels: [], // Timestamps
                 datasets: [
                     {
-                        label: 'X-axis',
-                        data: [0, 10, 5, 2, 20, 30], // Replace with dynamic data
+                        label: 'X Accel (m/s²)',
+                        data: [],
                         borderColor: 'rgba(255, 99, 132, 1)',
                         backgroundColor: 'rgba(255, 99, 132, 0.2)',
                         fill: false,
                         tension: 0.1
                     },
                     {
-                        label: 'Y-axis',
-                        data: [0, 20, 10, 4, 25, 35], // Replace with dynamic data
+                        label: 'Y Accel (m/s²)',
+                        data: [],
                         borderColor: 'rgba(54, 162, 235, 1)',
                         backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         fill: false,
                         tension: 0.1
                     },
                     {
-                        label: 'Z-axis',
-                        data: [0, 15, 7, 3, 22, 28], // Replace with dynamic data
+                        label: 'Z Accel (m/s²)',
+                        data: [],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'X Gyro (°/s)',
+                        data: [],
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Y Gyro (°/s)',
+                        data: [],
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Z Gyro (°/s)',
+                        data: [],
                         borderColor: 'rgba(75, 192, 192, 1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         fill: false,
@@ -406,6 +566,63 @@
                 }
             }
         });
+
+        // Function to update Motion Statistics Chart
+        function updateMotionStatsChart(data) {
+            // Example: Count motion events per hour
+            const eventCounts = {};
+            data.forEach(row => {
+                const hour = new Date(row.timestamp).getHours();
+                eventCounts[hour] = (eventCounts[hour] || 0) + 1;
+            });
+
+            const labels = Object.keys(eventCounts).map(hour => `${hour}:00`);
+            const counts = Object.values(eventCounts);
+
+            motionStatsChart.data.labels = labels;
+            motionStatsChart.data.datasets[0].data = counts;
+
+            motionStatsChart.update();
+        }
+
+        // Function to update Sensor Data Chart
+        function updateSensorDataChart(data) {
+            const timestamps = data.map(row => new Date(row.timestamp).toLocaleTimeString());
+            const xAccel = data.map(row => row.x_acceleration);
+            const yAccel = data.map(row => row.y_acceleration);
+            const zAccel = data.map(row => row.z_acceleration);
+            const xGyro = data.map(row => row.x_gyro);
+            const yGyro = data.map(row => row.y_gyro);
+            const zGyro = data.map(row => row.z_gyro);
+
+            sensorDataChart.data.labels = timestamps;
+            sensorDataChart.data.datasets[0].data = xAccel;
+            sensorDataChart.data.datasets[1].data = yAccel;
+            sensorDataChart.data.datasets[2].data = zAccel;
+            sensorDataChart.data.datasets[3].data = xGyro;
+            sensorDataChart.data.datasets[4].data = yGyro;
+            sensorDataChart.data.datasets[5].data = zGyro;
+
+            sensorDataChart.update();
+        }
+
+        // Functions to show and hide error messages
+        function showError(message) {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.style.display = 'none';
+        }
+
+        // Fetch and update data every 5 seconds
+        setInterval(fetchAndUpdateData, 5000);
+
+        // Initial data fetch on page load
+        window.addEventListener('load', fetchAndUpdateData);
     </script>
 </body>
 </html>
