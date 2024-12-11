@@ -35,6 +35,7 @@
             color: var(--text-color);
             display: flex;
             min-height: 100vh;
+            scroll-behavior: smooth; /* Enable smooth scrolling */
         }
 
         /* Sidebar Styling */
@@ -275,15 +276,15 @@
 <body>
     <!-- Sidebar Navigation -->
     <div class="sidebar" id="sidebar">
-        <a href="#motion-stats" class="active">
+        <a href="#motion-stats" class="sidebar-link active">
             <i class="fas fa-chart-bar icon"></i>
             <span class="link-text">Motion Statistics</span>
         </a>
-        <a href="#sensor-data">
+        <a href="#sensor-data" class="sidebar-link">
             <i class="fas fa-sliders-h icon"></i>
             <span class="link-text">Sensor Data</span>
         </a>
-        <a href="#live-data">
+        <a href="#live-data" class="sidebar-link">
             <i class="fas fa-table icon"></i>
             <span class="link-text">Live Data Table</span>
         </a>
@@ -352,13 +353,14 @@
         &copy; 2024 Motion Detection Inc. All rights reserved.
     </div>
 
-    <!-- JavaScript for Sidebar Toggle -->
+    <!-- JavaScript for Sidebar Toggle and Active Link Management -->
     <script>
         const toggleBtn = document.getElementById('toggleBtn');
         const sidebar = document.getElementById('sidebar');
         const header = document.getElementById('header');
         const mainContent = document.getElementById('mainContent');
         const footer = document.getElementById('footer');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
 
         toggleBtn.addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
@@ -372,6 +374,42 @@
             } else {
                 toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
             }
+        });
+
+        // Function to remove 'active' class from all sidebar links
+        function removeActiveClasses() {
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+        }
+
+        // Add click event listeners to sidebar links
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                removeActiveClasses();
+                this.classList.add('active');
+            });
+        });
+
+        // Optional: Update active link based on scroll position
+        window.addEventListener('scroll', () => {
+            let current = '';
+
+            // Determine the current section in view
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop - 100; // Adjust as needed
+                if (pageYOffset >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            // Remove active classes and add to the current link
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
         });
     </script>
 
@@ -434,7 +472,7 @@
         const motionStatsChart = new Chart(motionStatsCtx, {
             type: 'bar',
             data: {
-                labels: [], // Months or relevant labels
+                labels: [], // Time intervals (e.g., hours)
                 datasets: [{
                     label: 'Motion Events',
                     data: [], // Dynamic data
@@ -572,7 +610,8 @@
             // Example: Count motion events per hour
             const eventCounts = {};
             data.forEach(row => {
-                const hour = new Date(row.timestamp).getHours();
+                const date = new Date(row.timestamp);
+                const hour = date.getHours();
                 eventCounts[hour] = (eventCounts[hour] || 0) + 1;
             });
 
