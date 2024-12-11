@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Detection Dashboard</title>
+    <!-- Link to Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4C+X8N66bJkE+3ZlxM0eH72YVb5Jl4+BM8fPjWozg9yJL6yrkLtEMgVDRc7/2u3ZX+2qg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* CSS Variables for Easy Theming */
+        :root {
+            --background-color: #121212;
+            --header-bg-color: #1f1f1f;
+            --sidebar-bg-color: #1f1f1f;
+            --sidebar-hover-bg-color: #333333;
+            --text-color: #ffffff;
+            --accent-color: #4CAF50;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --card-bg-color: #1e1e1e;
+            --card-border-color: #333333;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg-color);
+            padding-top: 60px; /* To prevent overlap with header */
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: width var(--transition-speed);
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 18px;
+            color: var(--text-color);
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: var(--sidebar-hover-bg-color);
+            color: var(--accent-color);
+        }
+
+        .sidebar .icon {
+            margin-right: 15px;
+            font-size: 20px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .sidebar.collapsed .link-text {
+            display: none;
+        }
+
+        /* Header Styling */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 250px;
+            right: 0;
+            height: 60px;
+            background-color: var(--header-bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            transition: left var(--transition-speed);
+            z-index: 1000;
+        }
+
+        .header.collapsed {
+            left: 60px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--accent-color);
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 24px;
+            cursor: pointer;
+            outline: none;
+            transition: transform var(--transition-speed);
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            margin-left: 250px;
+            padding: 80px 20px 20px 20px; /* Top padding to prevent overlap with header */
+            flex: 1;
+            background-color: #1e1e1e;
+            transition: margin-left var(--transition-speed);
+        }
+
+        .header.collapsed + .main-content {
+            margin-left: 60px;
+        }
+
+        /* Card Styling for Data Sections */
+        .card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--card-border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: background-color var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+            font-size: 22px;
+            color: var(--accent-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Footer Styling */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--header-bg-color);
+            position: fixed;
+            bottom: 0;
+            left: 250px;
+            right: 0;
+            font-size: 14px;
+            color: #aaa;
+            transition: left var(--transition-speed);
+        }
+
+        .header.collapsed + .footer {
+            left: 60px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+            }
+
+            .sidebar.collapsed {
+                width: 0;
+            }
+
+            .sidebar a {
+                justify-content: center;
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .sidebar.collapsed a .link-text {
+                display: none;
+            }
+
+            .header {
+                left: 60px;
+            }
+
+            .header.collapsed {
+                left: 0;
+            }
+
+            .main-content {
+                margin-left: 60px;
+                padding: 80px 15px 15px 15px;
+            }
+
+            .header.collapsed + .main-content {
+                margin-left: 0;
+            }
+
+            .footer {
+                left: 60px;
+            }
+
+            .header.collapsed + .footer {
+                left: 0;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .toggle-btn {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <a href="#motion-stats" class="active">
+            <i class="fas fa-chart-bar icon"></i>
+            <span class="link-text">Motion Statistics</span>
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="header" id="header">
+        <h1>Motion Detection Dashboard</h1>
+        <button class="toggle-btn" id="toggleBtn" aria-label="Toggle Sidebar">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Motion Statistics Section -->
+        <section id="motion-stats" class="card">
+            <h2>Motion Statistics</h2>
+            <div class="chart-container">
+                <!-- Motion Statistics Chart -->
+                <canvas id="motionStatsChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Sensor Data Section -->
+        <section id="sensor-data" class="card">
+            <h2>Sensor Data (X, Y, Z)</h2>
+            <div class="chart-container">
+                <!-- Sensor Data Chart -->
+                <canvas id="sensorDataChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" id="footer">
+        &copy; 2024 Motion Detection Inc. All rights reserved.
+    </div>
+
+    <!-- JavaScript for Sidebar Toggle -->
+    <script>
+        const toggleBtn = document.getElementById('toggleBtn');
+        const sidebar = document.getElementById('sidebar');
+        const header = document.getElementById('header');
+        const mainContent = document.getElementById('mainContent');
+        const footer = document.getElementById('footer');
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            header.classList.toggle('collapsed');
+            mainContent.classList.toggle('collapsed');
+            footer.classList.toggle('collapsed');
+
+            // Change toggle button icon
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
+    </script>
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Motion Statistics Chart
+        const motionStatsCtx = document.getElementById('motionStatsChart').getContext('2d');
+        const motionStatsChart = new Chart(motionStatsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+                datasets: [{
+                    label: 'Motion Events',
+                    data: [12, 19, 3, 5, 2, 3], // Replace with dynamic data
+                    backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Sensor Data Chart
+        const sensorDataCtx = document.getElementById('sensorDataChart').getContext('2d');
+        const sensorDataChart = new Chart(sensorDataCtx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'],
+                datasets: [
+                    {
+                        label: 'X-axis',
+                        data: [0, 10, 5, 2, 20, 30], // Replace with dynamic data
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Y-axis',
+                        data: [0, 20, 10, 4, 25, 35], // Replace with dynamic data
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Z-axis',
+                        data: [0, 15, 7, 3, 22, 28], // Replace with dynamic data
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                stacked: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

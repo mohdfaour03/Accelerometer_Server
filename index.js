@@ -1,4 +1,5 @@
-const pool = require('./db')
+const pool = require('./db');
+const path = require('path');
 const express = require('express');
 const {body, validationResult} = require('express-validator');
 
@@ -8,8 +9,11 @@ const port = process.env.DB_PORT || 3000;
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/', (req, res) => {
-    res.send('Hello World'); // Respond with "Hello World"
+    res.sendFile(path.join(__dirname, 'public', 'home_page.html'));
 });
 
 //endpoint for getting the last 10 rows
@@ -42,44 +46,71 @@ app.get('/latest-data', async (req, res, next) => {
 });
 
 // POST route to receive and log sensor data
-app.post('/sensor-data', [
-    body('x').isFloat().withMessage('x must be a number'),
-    body('y').isFloat().withMessage('y must be a number'),
-    body('z').isFloat().withMessage('z must be a number'),
-],
+app.post(
+    '/sensor-data',
+    [
+        body('temperature').isFloat().withMessage('Temperature must be a number'),
+        body('x_acceleration').isFloat().withMessage('x_acceleration must be a number'),
+        body('y_acceleration').isFloat().withMessage('y_acceleration must be a number'),
+        body('z_acceleration').isFloat().withMessage('z_acceleration must be a number'),
+        body('x_gyro').isFloat().withMessage('x_gyro must be a number'),
+        body('y_gyro').isFloat().withMessage('y_gyro must be a number'),
+        body('z_gyro').isFloat().withMessage('z_gyro must be a number'),
+    ],
     async (req, res, next) => {
         const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ 
-            success: false, 
-            errors: errors.array() 
-        });
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array(),
+            });
+        }
+
+        const {
+            temperature,
+            x_acceleration,
+            y_acceleration,
+            z_acceleration,
+            x_gyro,
+            y_gyro,
+            z_gyro,
+        } = req.body;
+
+        try {
+            const query = `
+                INSERT INTO motion_data (
+                    temperature, x_acceleration, y_acceleration, z_acceleration, 
+                    x_gyro, y_gyro, z_gyro
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+            const values = [
+                temperature,
+                x_acceleration,
+                y_acceleration,
+                z_acceleration,
+                x_gyro,
+                y_gyro,
+                z_gyro,
+            ];
+
+            const result = await pool.query(query, values);
+
+            res.status(201).json({
+                success: true,
+                message: 'Data inserted successfully',
+                data: result.rows[0],
+            });
+        } catch (err) {
+            next(err);
+        }
     }
-    const { x, y, z } = req.body;
-    
-
-    try {
-        const query = 'INSERT INTO motion_data ("X", "Y", "Z") VALUES ($1, $2, $3) RETURNING *';
-
-        const values = [x, y, z];
-        
-        const result = await pool.query(query, values);
-
-        res.status(201).json({
-            success: true,
-            message: 'Data inserted successfully',
-            data: result.rows[0], // Return the inserted row
-        });
-    } catch (err) {
-       next(err);
-    }
-});
+);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack); // Logs the full error stack
+    console.error(err.stack);
     res.status(500).send(err.message || 'Something went wrong!');
 });
+
 
 
 // Start the server
